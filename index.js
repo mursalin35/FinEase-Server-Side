@@ -74,7 +74,97 @@ async function run() {
         res.status(500).send({ error: "Failed to fetch transactions" });
       }
     });
+    // Reports by Type
+    app.get("/reports/type", async (req, res) => {
+      try {
+        const { email, month } = req.query;
 
+        if (!email) return res.status(400).json({ error: "Email required" });
+
+        const filter = { userEmail: email };
+
+        if (month) {
+          filter.date = { $regex: `^${month}` }; // "2025-11"
+        }
+
+        const report = await transactionCollection
+          .aggregate([
+            { $match: filter },
+            {
+              $group: {
+                _id: "$type",
+                totalAmount: { $sum: { $toDouble: "$amount" } },
+              },
+            },
+          ])
+          .toArray();
+
+        res.json(report);
+      } catch (err) {
+        res.status(500).json({ error: "Failed to load type report" });
+      }
+    });
+
+    // Reports by Category
+    app.get("/reports/category", async (req, res) => {
+      try {
+        const { email, month } = req.query;
+
+        if (!email) return res.status(400).json({ error: "Email required" });
+
+        const filter = { userEmail: email };
+
+        if (month) {
+          filter.date = { $regex: `^${month}` }; // "2025-11"
+        }
+
+        const report = await transactionCollection
+          .aggregate([
+            { $match: filter },
+            {
+              $group: {
+                _id: "$category",
+                totalAmount: { $sum: { $toDouble: "$amount" } },
+              },
+            },
+          ])
+          .toArray();
+
+        res.json(report);
+      } catch (err) {
+        res.status(500).json({ error: "Failed to load category report" });
+      }
+    });
+
+    // Monthly Report
+    app.get("/reports/monthly", async (req, res) => {
+      try {
+        const { email } = req.query;
+        if (!email) return res.status(400).json({ error: "Email required" });
+
+        const report = await transactionCollection
+          .aggregate([
+            { $match: { userEmail: email } },
+            {
+              $addFields: { realDate: { $toDate: "$date" } },
+            },
+            {
+              $group: {
+                _id: { $month: "$realDate" }, // 1-12
+                totalAmount: { $sum: { $toDouble: "$amount" } },
+              },
+            },
+            { $sort: { _id: 1 } },
+          ])
+          .toArray();
+
+        res.json(report);
+      } catch (err) {
+        res.status(500).json({ error: "Failed to load monthly report" });
+      }
+    });
+
+    // ................................................................................
     // ✅ Delete transaction by ID
     app.delete("/transactions/:id", verifyFirebaseToken, async (req, res) => {
       const { id } = req.params;
@@ -93,23 +183,18 @@ async function run() {
     });
 
     // ✅ Get transaction details by ID
-    app.get(
-      "/transactions/details/:id",
-      verifyFirebaseToken,
-      async (req, res) => {
-        const { id } = req.params;
-        try {
-          const transaction = await transactionCollection.findOne({
-            _id: new ObjectId(id),
-          });
-          if (!transaction) return res.status(404).send({ error: "Not found" });
-          res.send(transaction);
-        } catch (error) {
-          res.status(500).send({ error: "Failed to fetch transaction" });
-        }
+    app.get("/transactions/:id", async (req, res) => {
+      const { id } = req.params;
+      try {
+        const transaction = await transactionCollection.findOne({
+          _id: new ObjectId(id),
+        });
+        if (!transaction) return res.status(404).send({ error: "Not found" });
+        res.send(transaction);
+      } catch (error) {
+        res.status(500).send({ error: "Failed to fetch transaction" });
       }
-    );
-  
+    });
 
     // ✅ Update transaction by ID
     app.put("/transactions/:id", verifyFirebaseToken, async (req, res) => {
