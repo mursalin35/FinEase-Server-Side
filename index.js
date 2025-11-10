@@ -165,6 +165,24 @@ async function run() {
     });
 
     // ................................................................................
+    app.get("/transactions/category-total", async (req, res) => {
+      const { category } = req.query;
+
+      const result = await transactionCollection
+        .aggregate([
+          { $match: { category: category } },
+          {
+            $group: {
+              _id: null,
+              totalAmount: { $sum: { $toDouble: "$amount" } },
+            },
+          },
+        ])
+        .toArray();
+
+      res.send({ totalAmount: result[0]?.totalAmount || 0 });
+    });
+
     // ✅ Delete transaction by ID
     app.delete("/transactions/:id", verifyFirebaseToken, async (req, res) => {
       const { id } = req.params;
