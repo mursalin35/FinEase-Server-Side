@@ -44,7 +44,7 @@ const verifyFirebaseToken = async (req, res, next) => {
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
 
     const db = client.db("FinEaseDB");
     const transactionCollection = db.collection("transactions");
@@ -285,7 +285,7 @@ async function run() {
 
     // .............................................MongoClient.EventEmitter..................
 
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
