@@ -165,6 +165,56 @@ async function run() {
     });
 
     // ................................................................................
+    // ✅ Reports Overview (Total Balance, Income, Expense)
+    app.get("/reports/overview", verifyFirebaseToken, async (req, res) => {
+      const { email } = req.query;
+
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+
+      try {
+        // ✅ Total Income
+        const incomeData = await transactionCollection
+          .aggregate([
+            { $match: { userEmail: email, type: "Income" } },
+            {
+              $group: {
+                _id: null,
+                total: { $sum: { $toDouble: "$amount" } },
+              },
+            },
+          ])
+          .toArray();
+
+        // ✅ Total Expense
+        const expenseData = await transactionCollection
+          .aggregate([
+            { $match: { userEmail: email, type: "Expense" } },
+            {
+              $group: {
+                _id: null,
+                total: { $sum: { $toDouble: "$amount" } },
+              },
+            },
+          ])
+          .toArray();
+
+        const totalIncome = incomeData[0]?.total || 0;
+        const totalExpense = expenseData[0]?.total || 0;
+        const totalBalance = totalIncome - totalExpense;
+
+        res.send({
+          totalIncome,
+          totalExpense,
+          totalBalance,
+        });
+      } catch (error) {
+        res.status(500).json({ error: "Failed to load overview report" });
+      }
+    });
+
+    // kkkkkk
     app.get("/transactions/category-total", async (req, res) => {
       const { category } = req.query;
 
