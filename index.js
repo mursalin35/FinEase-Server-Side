@@ -75,7 +75,7 @@ async function run() {
       }
     });
     // Reports by Type
-    app.get("/reports/type", async (req, res) => {
+    app.get("/reports/type", verifyFirebaseToken, async (req, res) => {
       try {
         const { email, month } = req.query;
 
@@ -106,7 +106,7 @@ async function run() {
     });
 
     // Reports by Category
-    app.get("/reports/category", async (req, res) => {
+    app.get("/reports/category", verifyFirebaseToken, async (req, res) => {
       try {
         const { email, month } = req.query;
 
@@ -137,7 +137,7 @@ async function run() {
     });
 
     // Monthly Report
-    app.get("/reports/monthly", async (req, res) => {
+    app.get("/reports/monthly", verifyFirebaseToken, async (req, res) => {
       try {
         const { email } = req.query;
         if (!email) return res.status(400).json({ error: "Email required" });
@@ -215,7 +215,7 @@ async function run() {
     });
 
     // kkkkkk
-    app.get("/transactions/category-total", async (req, res) => {
+    app.get("/transactions/category-total", verifyFirebaseToken, async (req, res) => {
       const { category } = req.query;
 
       const result = await transactionCollection
@@ -251,7 +251,7 @@ async function run() {
     });
 
     // ✅ Get transaction details by ID
-    app.get("/transactions/:id", async (req, res) => {
+    app.get("/transactions/:id", verifyFirebaseToken, async (req, res) => {
       const { id } = req.params;
       try {
         const transaction = await transactionCollection.findOne({
