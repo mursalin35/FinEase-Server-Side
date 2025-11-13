@@ -68,6 +68,7 @@ async function run() {
       try {
         const transactions = await transactionCollection
           .find({ userEmail: email })
+          .sort({date: -1})
           .toArray();
         res.send(transactions);
       } catch (error) {
