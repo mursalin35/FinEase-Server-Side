@@ -32,7 +32,6 @@ const verifyFirebaseToken = async (req, res, next) => {
       .status(401)
       .send({ message: "unauthorized access token not found " });
   }
-
   const token = authorization.split(" ")[1];
   try {
     await admin.auth().verifyIdToken(token);
@@ -42,10 +41,10 @@ const verifyFirebaseToken = async (req, res, next) => {
   }
 };
 
+// Main function container Start
 async function run() {
   try {
     // await client.connect();
-
     const db = client.db("FinEaseDB");
     const transactionCollection = db.collection("transactions");
 
@@ -60,7 +59,8 @@ async function run() {
       const result = await transactionCollection.insertOne(data);
       res.send(result);
     });
-    // -----------------------------------------------------------------
+
+    // my transactions
     app.get("/my-transactions", verifyFirebaseToken, async (req, res) => {
       const email = req.query.email;
       if (!email) return res.status(400).send({ error: "Email is required" });
@@ -68,13 +68,14 @@ async function run() {
       try {
         const transactions = await transactionCollection
           .find({ userEmail: email })
-          .sort({date: -1})
+          .sort({ date: -1 })
           .toArray();
         res.send(transactions);
       } catch (error) {
         res.status(500).send({ error: "Failed to fetch transactions" });
       }
     });
+
     // Reports by Type
     app.get("/reports/type", verifyFirebaseToken, async (req, res) => {
       try {
@@ -85,7 +86,7 @@ async function run() {
         const filter = { userEmail: email };
 
         if (month) {
-          filter.date = { $regex: `^${month}` }; // "2025-11"
+          filter.date = { $regex: `^${month}` };
         }
 
         const report = await transactionCollection
@@ -116,7 +117,7 @@ async function run() {
         const filter = { userEmail: email };
 
         if (month) {
-          filter.date = { $regex: `^${month}` }; // "2025-11"
+          filter.date = { $regex: `^${month}` };
         }
 
         const report = await transactionCollection
@@ -151,7 +152,7 @@ async function run() {
             },
             {
               $group: {
-                _id: { $month: "$realDate" }, // 1-12
+                _id: { $month: "$realDate" },
                 totalAmount: { $sum: { $toDouble: "$amount" } },
               },
             },
@@ -165,9 +166,8 @@ async function run() {
       }
     });
 
-    // ................................................................................
-    // ✅ Reports Overview (Total Balance, Income, Expense)
-    app.get("/reports/overview", verifyFirebaseToken, async (req, res) => {
+    // Overview (Total Balance, Income, Expense)
+    app.get("/overview", async (req, res) => {
       const { email } = req.query;
 
       if (!email) {
@@ -175,7 +175,7 @@ async function run() {
       }
 
       try {
-        // ✅ Total Income
+        // Total Income
         const incomeData = await transactionCollection
           .aggregate([
             { $match: { userEmail: email, type: "Income" } },
@@ -188,7 +188,7 @@ async function run() {
           ])
           .toArray();
 
-        // ✅ Total Expense
+        // Total Expense
         const expenseData = await transactionCollection
           .aggregate([
             { $match: { userEmail: email, type: "Expense" } },
@@ -215,34 +215,36 @@ async function run() {
       }
     });
 
-    // kkkkkk
-// ✅ category total (user-specific)
-app.get("/transactions/category-total", verifyFirebaseToken, async (req, res) => {
-  const { category, email } = req.query;
+    // category total (user-specific)
+    app.get(
+      "/transactions/category-total",
+      verifyFirebaseToken,
+      async (req, res) => {
+        const { category, email } = req.query;
 
-  // user & category দিয়ে match করা হবে
-  const result = await transactionCollection
-    .aggregate([
-      {
-        $match: {
-          category: category,
-          userEmail: email, // ✅ logged-in user's email অনুযায়ী ফিল্টার
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          totalAmount: { $sum: { $toDouble: "$amount" } },
-        },
-      },
-    ])
-    .toArray();
+        // user & category match
+        const result = await transactionCollection
+          .aggregate([
+            {
+              $match: {
+                category: category,
+                userEmail: email,
+              },
+            },
+            {
+              $group: {
+                _id: null,
+                totalAmount: { $sum: { $toDouble: "$amount" } },
+              },
+            },
+          ])
+          .toArray();
 
-  res.send({ totalAmount: result[0]?.totalAmount || 0 });
-});
+        res.send({ totalAmount: result[0]?.totalAmount || 0 });
+      }
+    );
 
-
-    // ✅ Delete transaction by ID
+    // Delete transaction by ID
     app.delete("/transactions/:id", verifyFirebaseToken, async (req, res) => {
       const { id } = req.params;
       try {
@@ -259,7 +261,7 @@ app.get("/transactions/category-total", verifyFirebaseToken, async (req, res) =>
       }
     });
 
-    // ✅ Get transaction details by ID
+    // transaction details by ID
     app.get("/transactions/:id", verifyFirebaseToken, async (req, res) => {
       const { id } = req.params;
       try {
@@ -273,10 +275,10 @@ app.get("/transactions/category-total", verifyFirebaseToken, async (req, res) =>
       }
     });
 
-    // ✅ Update transaction by ID
+    // Update transaction by ID
     app.put("/transactions/:id", verifyFirebaseToken, async (req, res) => {
       const { id } = req.params;
-      const updatedData = req.body; // { type, category, amount, date }
+      const updatedData = req.body;
 
       try {
         const result = await transactionCollection.updateOne(
@@ -291,8 +293,9 @@ app.get("/transactions/category-total", verifyFirebaseToken, async (req, res) =>
         res.status(500).send({ error: "Failed to update transaction" });
       }
     });
+    // Main function container End
 
-    // .............................................MongoClient.EventEmitter..................
+    // MongoClient.EventEmitter
 
     // await client.db("admin").command({ ping: 1 });
     console.log(
