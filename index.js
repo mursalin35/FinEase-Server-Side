@@ -215,23 +215,31 @@ async function run() {
     });
 
     // kkkkkk
-    app.get("/transactions/category-total", verifyFirebaseToken, async (req, res) => {
-      const { category } = req.query;
+// ✅ category total (user-specific)
+app.get("/transactions/category-total", verifyFirebaseToken, async (req, res) => {
+  const { category, email } = req.query;
 
-      const result = await transactionCollection
-        .aggregate([
-          { $match: { category: category } },
-          {
-            $group: {
-              _id: null,
-              totalAmount: { $sum: { $toDouble: "$amount" } },
-            },
-          },
-        ])
-        .toArray();
+  // user & category দিয়ে match করা হবে
+  const result = await transactionCollection
+    .aggregate([
+      {
+        $match: {
+          category: category,
+          userEmail: email, // ✅ logged-in user's email অনুযায়ী ফিল্টার
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: { $toDouble: "$amount" } },
+        },
+      },
+    ])
+    .toArray();
 
-      res.send({ totalAmount: result[0]?.totalAmount || 0 });
-    });
+  res.send({ totalAmount: result[0]?.totalAmount || 0 });
+});
+
 
     // ✅ Delete transaction by ID
     app.delete("/transactions/:id", verifyFirebaseToken, async (req, res) => {
